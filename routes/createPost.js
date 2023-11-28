@@ -3,6 +3,7 @@ const router = express.Router()
 const mongoose = require('mongoose')
 const requireLogin = require('../middlewares/requireLogin')
 const POST = mongoose.model("POST")
+const fetch = require("node-fetch");
 
 // Routes
 router.get("/allPosts", requireLogin, (req, res)=> {
@@ -14,21 +15,48 @@ router.get("/allPosts", requireLogin, (req, res)=> {
     .catch(err=>console.log(err))
 })
 
-router.post("/createPost", requireLogin,(req, res)=>{
+router.post("/createPost", requireLogin,async(req, res)=>{
     const {body, pic}=req.body
     if(!body || !pic){
         return res.status(422).json({error: "Please add all the fields"})
     }
+
+    const requestOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body:JSON.stringify({"url":pic}),
+      // body: JSON.stringify({ key: 'value' }),
+    };
+   console.log(requestOptions.body);
+   let type;
+    try {
+      const response = await fetch("http://localhost:8000/skinimage", requestOptions);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+     type = await response.json();
+     data=JSON.stringify(type); 
+     console.log(type);
+      console.log("API Response:", type);
+    } catch (error) {
+      console.error("API Error:", error.message);
+    }
+
     const post = new POST({
-        body,
+        body:type.result,
         photo : pic,
         postedBy: req.user
     })
     
     post.save().then((result)=>{
+        type=null;
         return res.json({post:result})
     }).catch((err)=>{
-        console.log(err);
+        console.log("errror:",err);
     })
 })
 
